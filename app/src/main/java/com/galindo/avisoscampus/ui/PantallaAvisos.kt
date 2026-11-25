@@ -77,6 +77,7 @@ fun PantallaAvisos(
     val estadoPermiso by viewModel.permiso.collectAsState()
     val faltan by viewModel.faltan.collectAsState()
     val escuchandoAvion by viewModel.escuchandoAvion.collectAsState()
+    val listaAvisos by viewModel.avisos.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -208,6 +209,10 @@ fun PantallaAvisos(
                             escuchando = escuchandoAvion,
                             onCambiarEscucha = { viewModel.cambiarEscucha(it) },
                         )
+                    }
+
+                    item {
+                        HistorialAvisos(avisos = listaAvisos)
                     }
 
                     items(uiState.avisos, key = { it.id }) { aviso ->

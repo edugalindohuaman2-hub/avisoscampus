@@ -37,6 +37,9 @@ class AvisosViewModel(
     private val _uiState = MutableStateFlow(AvisosUiState())
     val uiState: StateFlow<AvisosUiState> = _uiState.asStateFlow()
 
+    private val _avisos = MutableStateFlow<List<Aviso>>(emptyList())
+    val avisos: StateFlow<List<Aviso>> = _avisos.asStateFlow()
+
     private val _permiso = MutableStateFlow(EstadoPermiso.SIN_SOLICITAR)
     val permiso: StateFlow<EstadoPermiso> = _permiso.asStateFlow()
 
@@ -58,6 +61,7 @@ class AvisosViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(estaCargando = true) }
             repository.obtenerAvisos().collect { lista ->
+                _avisos.value = lista
                 _uiState.update { it.copy(avisos = lista, estaCargando = false) }
             }
         }
