@@ -64,6 +64,7 @@ import com.galindo.avisoscampus.model.Aviso
 import com.galindo.avisoscampus.model.EstadoPermiso
 import com.galindo.avisoscampus.model.Origen
 import com.galindo.avisoscampus.notificacion.Notificador
+import com.galindo.avisoscampus.receiver.CargadorReceiver
 import com.galindo.avisoscampus.receiver.ModoAvionReceiver
 import com.galindo.avisoscampus.viewmodel.AvisoEvento
 import com.galindo.avisoscampus.viewmodel.AvisosViewModel
@@ -79,6 +80,7 @@ fun PantallaAvisos(
     val estadoPermiso by viewModel.permiso.collectAsState()
     val faltan by viewModel.faltan.collectAsState()
     val escuchandoAvion by viewModel.escuchandoAvion.collectAsState()
+    val escuchandoCargador by viewModel.escuchandoCargador.collectAsState()
     val listaAvisos by viewModel.avisos.collectAsState()
     val mensajeError by viewModel.mensaje.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -101,6 +103,29 @@ fun PantallaAvisos(
                 viewModel.alCambiarModoAvion(activo)
             }
             val filter = IntentFilter(Intent.ACTION_AIRPLANE_MODE_CHANGED)
+            ContextCompat.registerReceiver(
+                context,
+                receptor,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+            onDispose {
+                context.unregisterReceiver(receptor)
+            }
+        } else {
+            onDispose { }
+        }
+    }
+
+    DisposableEffect(escuchandoCargador) {
+        if (escuchandoCargador) {
+            val receptor = CargadorReceiver { conectado ->
+                viewModel.alCambiarCargador(conectado)
+            }
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_POWER_CONNECTED)
+                addAction(Intent.ACTION_POWER_DISCONNECTED)
+            }
             ContextCompat.registerReceiver(
                 context,
                 receptor,
@@ -231,6 +256,13 @@ fun PantallaAvisos(
                         TarjetaModoAvion(
                             escuchando = escuchandoAvion,
                             onCambiarEscucha = { viewModel.cambiarEscucha(it) },
+                        )
+                    }
+
+                    item {
+                        TarjetaCargador(
+                            escuchando = escuchandoCargador,
+                            onCambiarEscucha = { viewModel.cambiarEscuchaCargador(it) },
                         )
                     }
 
@@ -445,6 +477,40 @@ fun TarjetaModoAvion(
 }
 
 @Composable
+fun TarjetaCargador(
+    escuchando: Boolean,
+    onCambiarEscucha: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Escuchar el cargador",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Switch(
+                checked = escuchando,
+                onCheckedChange = onCambiarEscucha,
+            )
+        }
+    }
+}
+
+@Composable
 fun EtiquetaEstadoPermiso(
     estado: EstadoPermiso,
     modifier: Modifier = Modifier,
@@ -559,6 +625,7 @@ fun EtiquetaOrigen(
         Origen.BOTON -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.primary
         Origen.RECORDATORIO -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.secondary
         Origen.MODO_AVION -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+        Origen.CARGADOR -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
     }
 
     Surface(
