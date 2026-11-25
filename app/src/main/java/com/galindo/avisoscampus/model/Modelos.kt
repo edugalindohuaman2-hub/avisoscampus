@@ -4,7 +4,7 @@ enum class Origen(val etiqueta: String) {
     ACADEMICO("Académico"),
     ADMINISTRATIVO("Administrativo"),
     EVENTOS("Eventos"),
-    GENERAL("General")
+    GENERAL("General"),
 }
 
 data class Aviso(
@@ -13,11 +13,18 @@ data class Aviso(
     val contenido: String,
     val fecha: String,
     val origen: Origen,
-    val esImportante: Boolean = false
+    val esImportante: Boolean = false,
 )
+
+enum class EstadoPermiso(val etiqueta: String) {
+    SIN_SOLICITAR("Sin solicitar"),
+    CONCEDIDO("Concedido"),
+    DENEGADO("Denegado"),
+}
 
 data class PermisoUi(
     val concedido: Boolean = false,
     val debeSolicitar: Boolean = true,
-    val mostrarRacional: Boolean = false
+    val mostrarRacional: Boolean = false,
+    val estado: EstadoPermiso = EstadoPermiso.SIN_SOLICITAR,
 )

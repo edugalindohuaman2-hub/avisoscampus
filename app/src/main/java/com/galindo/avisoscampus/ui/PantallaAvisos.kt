@@ -1,5 +1,9 @@
 package com.galindo.avisoscampus.ui
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,12 +46,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.galindo.avisoscampus.R
 import com.galindo.avisoscampus.model.Aviso
+import com.galindo.avisoscampus.model.EstadoPermiso
 import com.galindo.avisoscampus.model.Origen
+import com.galindo.avisoscampus.notificacion.Notificador
 import com.galindo.avisoscampus.viewmodel.AvisoEvento
 import com.galindo.avisoscampus.viewmodel.AvisosViewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -58,7 +66,20 @@ fun PantallaAvisos(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val estadoPermiso by viewModel.permiso.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { concedido ->
+        viewModel.permisoRespondido(concedido)
+    }
+
+    LaunchedEffect(Unit) {
+        val tienePermiso = Notificador.tienePermiso(context)
+        viewModel.permisoRespondido(tienePermiso)
+    }
 
     LaunchedEffect(key1 = true) {
         viewModel.eventos.collectLatest { evento ->
@@ -67,7 +88,7 @@ fun PantallaAvisos(
                     snackbarHostState.showSnackbar(evento.mensaje)
                 }
                 is AvisoEvento.PermisoSolicitado -> {
-                    // Evento de estado de permiso
+                    // Evento de solicitud de permiso
                 }
             }
         }
@@ -85,13 +106,21 @@ fun PantallaAvisos(
                 actions = {
                     IconButton(
                         onClick = {
-                            viewModel.actualizarEstadoPermiso(!uiState.permisoUi.concedido)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                viewModel.permisoRespondido(true)
+                            }
                         },
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_notificacion),
                             contentDescription = "Notificaciones",
-                            tint = if (uiState.permisoUi.concedido) MaterialTheme.colorScheme.primary else Color.Gray,
+                            tint = if (estadoPermiso == EstadoPermiso.CONCEDIDO) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                Color.Gray
+                            },
                         )
                     }
                 },
@@ -114,6 +143,19 @@ fun PantallaAvisos(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    item {
+                        SeccionPermisoNotificacion(
+                            estadoPermiso = estadoPermiso,
+                            onSolicitarPermiso = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    viewModel.permisoRespondido(true)
+                                }
+                            },
+                        )
+                    }
+
                     items(uiState.avisos, key = { it.id }) { aviso ->
                         TarjetaAviso(
                             aviso = aviso,
@@ -123,6 +165,74 @@ fun PantallaAvisos(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SeccionPermisoNotificacion(
+    estadoPermiso: EstadoPermiso,
+    onSolicitarPermiso: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Estado de notificaciones",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                EtiquetaEstadoPermiso(estado = estadoPermiso)
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Button(
+                onClick = onSolicitarPermiso,
+            ) {
+                Text(text = "Permitir notificaciones")
+            }
+        }
+    }
+}
+
+@Composable
+fun EtiquetaEstadoPermiso(
+    estado: EstadoPermiso,
+    modifier: Modifier = Modifier,
+) {
+    val (bgColor, textColor) = when (estado) {
+        EstadoPermiso.CONCEDIDO -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
+        EstadoPermiso.DENEGADO -> Color(0xFFFFEBEE) to Color(0xFFC62828)
+        EstadoPermiso.SIN_SOLICITAR -> Color(0xFFFFF8E1) to Color(0xFFF57F17)
+    }
+
+    Surface(
+        modifier = modifier,
+        color = bgColor,
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Text(
+            text = estado.etiqueta,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = textColor,
+        )
     }
 }
 

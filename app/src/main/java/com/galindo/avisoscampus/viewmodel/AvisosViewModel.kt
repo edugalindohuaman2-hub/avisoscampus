@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.galindo.avisoscampus.data.AvisosRepository
 import com.galindo.avisoscampus.model.Aviso
+import com.galindo.avisoscampus.model.EstadoPermiso
 import com.galindo.avisoscampus.model.PermisoUi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,15 +23,18 @@ sealed interface AvisoEvento {
 data class AvisosUiState(
     val avisos: List<Aviso> = emptyList(),
     val permisoUi: PermisoUi = PermisoUi(),
-    val estaCargando: Boolean = false
+    val estaCargando: Boolean = false,
 )
 
 class AvisosViewModel(
-    private val repository: AvisosRepository
+    private val repository: AvisosRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AvisosUiState())
     val uiState: StateFlow<AvisosUiState> = _uiState.asStateFlow()
+
+    private val _permiso = MutableStateFlow(EstadoPermiso.SIN_SOLICITAR)
+    val permiso: StateFlow<EstadoPermiso> = _permiso.asStateFlow()
 
     private val _eventos = MutableSharedFlow<AvisoEvento>()
     val eventos: SharedFlow<AvisoEvento> = _eventos.asSharedFlow()
@@ -54,14 +58,26 @@ class AvisosViewModel(
         }
     }
 
-    fun actualizarEstadoPermiso(concedido: Boolean) {
+    fun permisoRespondido(concedido: Boolean) {
+        val nuevoEstado = if (concedido) EstadoPermiso.CONCEDIDO else EstadoPermiso.DENEGADO
+        _permiso.value = nuevoEstado
         _uiState.update {
-            it.copy(permisoUi = it.permisoUi.copy(concedido = concedido, debeSolicitar = !concedido))
+            it.copy(
+                permisoUi = it.permisoUi.copy(
+                    concedido = concedido,
+                    debeSolicitar = !concedido,
+                    estado = nuevoEstado,
+                ),
+            )
         }
         viewModelScope.launch {
             _eventos.emit(AvisoEvento.PermisoSolicitado(concedido))
-            val msg = if (concedido) "Notificaciones activadas" else "Notificaciones desactivadas"
+            val msg = if (concedido) "Notificaciones permitidas" else "Permiso de notificaciones denegado"
             _eventos.emit(AvisoEvento.MostrarMensaje(msg))
         }
+    }
+
+    fun actualizarEstadoPermiso(concedido: Boolean) {
+        permisoRespondido(concedido)
     }
 }
