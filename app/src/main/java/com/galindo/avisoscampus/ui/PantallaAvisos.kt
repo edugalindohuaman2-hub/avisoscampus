@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,6 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -90,6 +92,12 @@ fun PantallaAvisos(
                 is AvisoEvento.PermisoSolicitado -> {
                     // Evento de solicitud de permiso
                 }
+                is AvisoEvento.MostrarNotificacion -> {
+                    val enviado = Notificador.mostrar(context, evento.aviso)
+                    if (!enviado) {
+                        snackbarHostState.showSnackbar("Permiso denegado: No se pudo mostrar la notificación")
+                    }
+                }
             }
         }
     }
@@ -144,7 +152,7 @@ fun PantallaAvisos(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item {
-                        SeccionPermisoNotificacion(
+                        SeccionAccionesNotificacion(
                             estadoPermiso = estadoPermiso,
                             onSolicitarPermiso = {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -152,6 +160,9 @@ fun PantallaAvisos(
                                 } else {
                                     viewModel.permisoRespondido(true)
                                 }
+                            },
+                            onMostrarAviso = {
+                                viewModel.avisarAhora()
                             },
                         )
                     }
@@ -169,9 +180,10 @@ fun PantallaAvisos(
 }
 
 @Composable
-fun SeccionPermisoNotificacion(
+fun SeccionAccionesNotificacion(
     estadoPermiso: EstadoPermiso,
     onSolicitarPermiso: () -> Unit,
+    onMostrarAviso: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -182,29 +194,45 @@ fun SeccionPermisoNotificacion(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Estado de notificaciones",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                EtiquetaEstadoPermiso(estado = estadoPermiso)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Estado de notificaciones",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    EtiquetaEstadoPermiso(estado = estadoPermiso)
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Button(
+                    onClick = onSolicitarPermiso,
+                ) {
+                    Text(text = "Permitir notificaciones")
+                }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            Button(
-                onClick = onSolicitarPermiso,
+            OutlinedButton(
+                onClick = onMostrarAviso,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ),
             ) {
-                Text(text = "Permitir notificaciones")
+                Text(text = "Mostrar aviso")
             }
         }
     }
@@ -322,6 +350,7 @@ fun EtiquetaOrigen(
         Origen.ADMINISTRATIVO -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
         Origen.EVENTOS -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
         Origen.GENERAL -> MaterialTheme.colorScheme.surfaceContainerHigh to MaterialTheme.colorScheme.onSurfaceVariant
+        Origen.BOTON -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.primary
     }
 
     Surface(

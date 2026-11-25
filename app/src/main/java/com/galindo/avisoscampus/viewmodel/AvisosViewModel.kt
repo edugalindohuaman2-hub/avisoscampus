@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.galindo.avisoscampus.data.AvisosRepository
 import com.galindo.avisoscampus.model.Aviso
 import com.galindo.avisoscampus.model.EstadoPermiso
+import com.galindo.avisoscampus.model.Origen
 import com.galindo.avisoscampus.model.PermisoUi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 sealed interface AvisoEvento {
     data class MostrarMensaje(val mensaje: String) : AvisoEvento
     data class PermisoSolicitado(val concedido: Boolean) : AvisoEvento
+    data class MostrarNotificacion(val aviso: Aviso) : AvisoEvento
 }
 
 data class AvisosUiState(
@@ -79,5 +81,20 @@ class AvisosViewModel(
 
     fun actualizarEstadoPermiso(concedido: Boolean) {
         permisoRespondido(concedido)
+    }
+
+    fun avisarAhora() {
+        viewModelScope.launch {
+            val nuevoAviso = Aviso(
+                id = System.currentTimeMillis().toString(),
+                titulo = "Tarea lista",
+                contenido = "Tu entrega fue registrada",
+                fecha = "Ahora",
+                origen = Origen.BOTON,
+                esImportante = true,
+            )
+            repository.agregarAviso(nuevoAviso)
+            _eventos.emit(AvisoEvento.MostrarNotificacion(nuevoAviso))
+        }
     }
 }
