@@ -56,6 +56,9 @@ class AvisosViewModel(
     private val _escuchandoAvion = MutableStateFlow(false)
     val escuchandoAvion: StateFlow<Boolean> = _escuchandoAvion.asStateFlow()
 
+    private val _escuchandoCargador = MutableStateFlow(false)
+    val escuchandoCargador: StateFlow<Boolean> = _escuchandoCargador.asStateFlow()
+
     init {
         cargarAvisos()
     }
@@ -164,6 +167,26 @@ class AvisosViewModel(
                 contenido = mensajeState,
                 fecha = "Ahora",
                 origen = Origen.MODO_AVION,
+                esImportante = true,
+            )
+            repository.agregarAviso(nuevoAviso)
+            _eventos.emit(AvisoEvento.MostrarNotificacion(nuevoAviso))
+        }
+    }
+
+    fun cambiarEscuchaCargador(valor: Boolean) {
+        _escuchandoCargador.value = valor
+    }
+
+    fun alCambiarCargador(conectado: Boolean) {
+        viewModelScope.launch {
+            val contenidoState = if (conectado) "Conectado" else "Desconectado"
+            val nuevoAviso = Aviso(
+                id = System.currentTimeMillis().toString(),
+                titulo = "Cargador",
+                contenido = contenidoState,
+                fecha = "Ahora",
+                origen = Origen.CARGADOR,
                 esImportante = true,
             )
             repository.agregarAviso(nuevoAviso)
