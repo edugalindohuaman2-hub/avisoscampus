@@ -43,6 +43,9 @@ class AvisosViewModel(
     private val _permiso = MutableStateFlow(EstadoPermiso.SIN_SOLICITAR)
     val permiso: StateFlow<EstadoPermiso> = _permiso.asStateFlow()
 
+    private val _mensaje = MutableStateFlow<String?>(null)
+    val mensaje: StateFlow<String?> = _mensaje.asStateFlow()
+
     private val _eventos = MutableSharedFlow<AvisoEvento>()
     val eventos: SharedFlow<AvisoEvento> = _eventos.asSharedFlow()
 
@@ -74,6 +77,9 @@ class AvisosViewModel(
     }
 
     fun permisoRespondido(concedido: Boolean) {
+        if (concedido) {
+            _mensaje.value = null
+        }
         val nuevoEstado = if (concedido) EstadoPermiso.CONCEDIDO else EstadoPermiso.DENEGADO
         _permiso.value = nuevoEstado
         _uiState.update {
@@ -90,6 +96,10 @@ class AvisosViewModel(
             val msg = if (concedido) "Notificaciones permitidas" else "Permiso de notificaciones denegado"
             _eventos.emit(AvisoEvento.MostrarMensaje(msg))
         }
+    }
+
+    fun noSePudoMostrar() {
+        _mensaje.value = "Sin permiso: el aviso se guardó en el historial, pero no se mostró"
     }
 
     fun actualizarEstadoPermiso(concedido: Boolean) {

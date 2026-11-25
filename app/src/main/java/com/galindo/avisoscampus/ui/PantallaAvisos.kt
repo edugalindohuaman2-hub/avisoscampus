@@ -3,7 +3,9 @@ package com.galindo.avisoscampus.ui
 import android.Manifest
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -78,6 +80,7 @@ fun PantallaAvisos(
     val faltan by viewModel.faltan.collectAsState()
     val escuchandoAvion by viewModel.escuchandoAvion.collectAsState()
     val listaAvisos by viewModel.avisos.collectAsState()
+    val mensajeError by viewModel.mensaje.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -124,7 +127,7 @@ fun PantallaAvisos(
                 is AvisoEvento.MostrarNotificacion -> {
                     val enviado = Notificador.mostrar(context, evento.aviso)
                     if (!enviado) {
-                        snackbarHostState.showSnackbar("Permiso denegado: No se pudo mostrar la notificación")
+                        viewModel.noSePudoMostrar()
                     }
                 }
             }
@@ -180,6 +183,26 @@ fun PantallaAvisos(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    if (mensajeError != null) {
+                        item {
+                            RecuadroErrorMensaje(
+                                mensaje = mensajeError!!,
+                                onAbrirAjustes = {
+                                    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                        }
+                                    } else {
+                                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = Uri.fromParts("package", context.packageName, null)
+                                        }
+                                    }
+                                    context.startActivity(intent)
+                                },
+                            )
+                        }
+                    }
+
                     item {
                         SeccionAccionesNotificacion(
                             estadoPermiso = estadoPermiso,
@@ -222,6 +245,45 @@ fun PantallaAvisos(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun RecuadroErrorMensaje(
+    mensaje: String,
+    onAbrirAjustes: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            Text(
+                text = mensaje,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = onAbrirAjustes,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ),
+            ) {
+                Text(text = "Abrir ajustes")
             }
         }
     }
