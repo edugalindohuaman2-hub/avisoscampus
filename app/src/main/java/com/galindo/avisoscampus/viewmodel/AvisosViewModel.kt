@@ -7,6 +7,8 @@ import com.galindo.avisoscampus.model.Aviso
 import com.galindo.avisoscampus.model.EstadoPermiso
 import com.galindo.avisoscampus.model.Origen
 import com.galindo.avisoscampus.model.PermisoUi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -40,6 +42,10 @@ class AvisosViewModel(
 
     private val _eventos = MutableSharedFlow<AvisoEvento>()
     val eventos: SharedFlow<AvisoEvento> = _eventos.asSharedFlow()
+
+    private var trabajo: Job? = null
+    private val _faltan = MutableStateFlow<Int?>(null)
+    val faltan: StateFlow<Int?> = _faltan.asStateFlow()
 
     init {
         cargarAvisos()
@@ -96,5 +102,35 @@ class AvisosViewModel(
             repository.agregarAviso(nuevoAviso)
             _eventos.emit(AvisoEvento.MostrarNotificacion(nuevoAviso))
         }
+    }
+
+    fun recordarEn(segundos: Int = 10) {
+        if (trabajo?.isActive == true) return
+
+        trabajo = viewModelScope.launch {
+            try {
+                for (i in segundos downTo 1) {
+                    _faltan.value = i
+                    delay(1000)
+                }
+                val nuevoAviso = Aviso(
+                    id = System.currentTimeMillis().toString(),
+                    titulo = "Recordatorio",
+                    contenido = "Revisa tu laboratorio pendiente",
+                    fecha = "Ahora",
+                    origen = Origen.RECORDATORIO,
+                    esImportante = true,
+                )
+                repository.agregarAviso(nuevoAviso)
+                _eventos.emit(AvisoEvento.MostrarNotificacion(nuevoAviso))
+            } finally {
+                _faltan.value = null
+                trabajo = null
+            }
+        }
+    }
+
+    fun cancelarRecordatorio() {
+        trabajo?.cancel()
     }
 }

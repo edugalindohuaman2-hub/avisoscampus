@@ -69,6 +69,7 @@ fun PantallaAvisos(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val estadoPermiso by viewModel.permiso.collectAsState()
+    val faltan by viewModel.faltan.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -167,6 +168,14 @@ fun PantallaAvisos(
                         )
                     }
 
+                    item {
+                        TarjetaRecordatorio(
+                            faltan = faltan,
+                            onRecordar = { viewModel.recordarEn(10) },
+                            onCancelar = { viewModel.cancelarRecordatorio() },
+                        )
+                    }
+
                     items(uiState.avisos, key = { it.id }) { aviso ->
                         TarjetaAviso(
                             aviso = aviso,
@@ -233,6 +242,68 @@ fun SeccionAccionesNotificacion(
                 ),
             ) {
                 Text(text = "Mostrar aviso")
+            }
+        }
+    }
+}
+
+@Composable
+fun TarjetaRecordatorio(
+    faltan: Int?,
+    onRecordar: () -> Unit,
+    onCancelar: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            Text(
+                text = "Recordatorio",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (faltan != null) {
+                Text(
+                    text = "Faltan $faltan s",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = onRecordar,
+                    enabled = (faltan == null),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(text = "Recordar en 10 s")
+                }
+
+                OutlinedButton(
+                    onClick = onCancelar,
+                    enabled = (faltan != null),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(text = "Cancelar")
+                }
             }
         }
     }
@@ -351,6 +422,7 @@ fun EtiquetaOrigen(
         Origen.EVENTOS -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
         Origen.GENERAL -> MaterialTheme.colorScheme.surfaceContainerHigh to MaterialTheme.colorScheme.onSurfaceVariant
         Origen.BOTON -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.primary
+        Origen.RECORDATORIO -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.secondary
     }
 
     Surface(
