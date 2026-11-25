@@ -7,6 +7,7 @@ enum class Origen(val etiqueta: String) {
     GENERAL("General"),
     BOTON("Botón"),
     RECORDATORIO("Recordatorio"),
+    MODO_AVION("Modo avión"),
 }
 
 data class Aviso(

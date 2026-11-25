@@ -1,6 +1,8 @@
 package com.galindo.avisoscampus.ui
 
 import android.Manifest
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,10 +39,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,11 +56,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.galindo.avisoscampus.R
 import com.galindo.avisoscampus.model.Aviso
 import com.galindo.avisoscampus.model.EstadoPermiso
 import com.galindo.avisoscampus.model.Origen
 import com.galindo.avisoscampus.notificacion.Notificador
+import com.galindo.avisoscampus.receiver.ModoAvionReceiver
 import com.galindo.avisoscampus.viewmodel.AvisoEvento
 import com.galindo.avisoscampus.viewmodel.AvisosViewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -70,6 +76,7 @@ fun PantallaAvisos(
     val uiState by viewModel.uiState.collectAsState()
     val estadoPermiso by viewModel.permiso.collectAsState()
     val faltan by viewModel.faltan.collectAsState()
+    val escuchandoAvion by viewModel.escuchandoAvion.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -82,6 +89,26 @@ fun PantallaAvisos(
     LaunchedEffect(Unit) {
         val tienePermiso = Notificador.tienePermiso(context)
         viewModel.permisoRespondido(tienePermiso)
+    }
+
+    DisposableEffect(escuchandoAvion) {
+        if (escuchandoAvion) {
+            val receptor = ModoAvionReceiver { activo ->
+                viewModel.alCambiarModoAvion(activo)
+            }
+            val filter = IntentFilter(Intent.ACTION_AIRPLANE_MODE_CHANGED)
+            ContextCompat.registerReceiver(
+                context,
+                receptor,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+            onDispose {
+                context.unregisterReceiver(receptor)
+            }
+        } else {
+            onDispose { }
+        }
     }
 
     LaunchedEffect(key1 = true) {
@@ -173,6 +200,13 @@ fun PantallaAvisos(
                             faltan = faltan,
                             onRecordar = { viewModel.recordarEn(10) },
                             onCancelar = { viewModel.cancelarRecordatorio() },
+                        )
+                    }
+
+                    item {
+                        TarjetaModoAvion(
+                            escuchando = escuchandoAvion,
+                            onCambiarEscucha = { viewModel.cambiarEscucha(it) },
                         )
                     }
 
@@ -310,6 +344,40 @@ fun TarjetaRecordatorio(
 }
 
 @Composable
+fun TarjetaModoAvion(
+    escuchando: Boolean,
+    onCambiarEscucha: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Escuchar el modo avión",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Switch(
+                checked = escuchando,
+                onCheckedChange = onCambiarEscucha,
+            )
+        }
+    }
+}
+
+@Composable
 fun EtiquetaEstadoPermiso(
     estado: EstadoPermiso,
     modifier: Modifier = Modifier,
@@ -423,6 +491,7 @@ fun EtiquetaOrigen(
         Origen.GENERAL -> MaterialTheme.colorScheme.surfaceContainerHigh to MaterialTheme.colorScheme.onSurfaceVariant
         Origen.BOTON -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.primary
         Origen.RECORDATORIO -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.secondary
+        Origen.MODO_AVION -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
     }
 
     Surface(
