@@ -79,17 +79,33 @@ graph TD
 
 ## 📷 Capturas de Ejecución
 
-1. **Interfaz Principal y Recordatorio** (`img.png`): Muestra la pantalla principal con el estado de notificaciones, la cuenta regresiva en vivo del recordatorio, el switch del modo avión y el historial visual.  
-   ![Interfaz Principal y Recordatorio](./img.png)
+### 1. Interfaz Principal y Recordatorio
 
-2. **Notificaciones en Panel** (`img_1.png`): Muestra el panel de notificaciones del sistema con los avisos generados de tareas y recordatorios.  
-   ![Notificaciones en Panel](./img_1.png)
+![Interfaz Principal y Recordatorio](file:///C:/Users/User/AvisosCampus/capturas/recordatorio.png)
 
-3. **Modo Avión Detectado** (`img_2.png`): Muestra la notificación emitida automáticamente en el panel al activarse el modo avión.  
-   ![Modo Avión](./img_2.png)
+---
 
-4. **Historial de Notificaciones Acumulado** (`img_3.png`): Muestra la lista de notificaciones generadas en la barra de estado del sistema.  
-   ![Historial de Notificaciones](./img_3.png)
+### 2. Notificaciones en Panel
+
+![Notificaciones en Panel](file:///C:/Users/User/AvisosCampus/capturas/notificacion_panel.png)
+
+---
+
+### 3. Modo Avión Detectado
+
+![Modo Avión Detectado](file:///C:/Users/User/AvisosCampus/capturas/modo_avion.png)
+
+---
+
+### 4. Historial de Notificaciones Acumulado
+
+![Historial de Notificaciones](file:///C:/Users/User/AvisosCampus/capturas/historial.png)
+
+---
+
+### 5. Permiso Denegado
+
+![Permiso Denegado](file:///C:/Users/User/AvisosCampus/capturas/permiso_denegado.png)
 
 ---
 
